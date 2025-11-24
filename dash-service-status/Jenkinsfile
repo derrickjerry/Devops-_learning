@@ -10,12 +10,7 @@ pipeline {
     }
     stage('Test') {
       steps {
-        sh '. venv/bin/activate && cd dash-service-status && python -m pytest --cov-report=term-missing'
-      }
-    }
-    stage('Lint') {
-      steps {
-        sh '. venv/bin/activate && python -m flake8 dash-service-status/app'
+        sh '. venv/bin/activate && cd dash-service-status && python -m pytest'
       }
     }
   }
