@@ -1,5 +1,0 @@
-pod1,up,running,PL1
-pod2,up,running,PL1
-pod3,down,error,PL1
-pod4,up,running,PL2
-pod5,down,pending,PL2

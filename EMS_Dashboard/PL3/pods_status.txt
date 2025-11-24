@@ -1,3 +1,0 @@
-pod7,up,running,PL3
-pod8,up,running,PL3
-pod9,up,running,PL3

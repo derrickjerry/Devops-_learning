@@ -1,3 +1,0 @@
-service4,running,healthy,PL2
-service5,stopped,maintenance,PL2
-service6,running,healthy,PL2
