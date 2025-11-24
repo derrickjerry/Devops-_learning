@@ -1,0 +1,234 @@
+import dash
+from dash import html, dcc, dash_table
+from dash.dependencies import Input, Output, State
+import pandas as pd
+import datetime
+import os
+import glob
+import sys
+
+def get_status_files():
+    """Get all status text files in the current directory"""
+    return glob.glob('*_status.txt')
+
+# Initialize the Dash app with external stylesheets
+app = dash.Dash(__name__, 
+    external_stylesheets=[
+        'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'
+    ])
+
+import os
+
+# Get the current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Functions to read and process the data
+def read_status_file(filename):
+    """Read a status file and return its data"""
+    data = []
+    try:
+        with open(filename, 'r') as file:
+            print(f"Reading {filename}")
+            content = file.readlines()
+            # Get component type from filename (e.g., 'pods' from 'pods_status.txt')
+            component_type = filename.split('_')[0].capitalize()
+            
+            for line in content:
+                name, status, state = line.strip().split(',')
+                # Standardize status to 'up'/'down'
+                if status.lower() in ['running', 'up']:
+                    status = 'up'
+                else:
+                    status = 'down'
+                
+                data.append({
+                    'Name': name,
+                    'Status': status,
+                    'State': state,
+                    'Type': component_type
+                })
+            print(f"Processed {len(data)} entries from {filename}")
+    except Exception as e:
+        print(f"Error reading {filename}: {str(e)}", file=sys.stderr)
+    return data
+
+def read_all_data():
+    """Read all status files and combine their data"""
+    print("\n=== Reading All Status Files ===")
+    all_data = []
+    
+    # Get list of status files
+    status_files = get_status_files()
+    print(f"Found status files: {status_files}")
+    
+    # Read each status file
+    for filename in status_files:
+        file_data = read_status_file(filename)
+        all_data.extend(file_data)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(all_data)
+    if len(df) == 0:
+        df = pd.DataFrame(columns=['Name', 'Status', 'State', 'Type'])
+    
+    print("\nFinal Combined Data:")
+    print(f"Total records: {len(df)}")
+    print(df)
+    
+    return df
+
+# Create the layout
+app.layout = html.Div(className='container-fluid', children=[
+    dcc.Interval(
+        id='interval-component',
+        interval=5000,  # in milliseconds (5 seconds)
+        n_intervals=0
+    ),
+    
+    # Header with last update time
+    html.Div(className='row mt-3', children=[
+        html.Div(className='col-12', children=[
+            html.H1('Infrastructure Status Dashboard', className='text-center'),
+            html.P(id='last-update-time', className='text-center text-muted')
+        ])
+    ]),
+    
+    # Summary cards container
+    html.Div(id='summary-cards', className='row mt-3')
+    ]),
+    
+    # Status boxes and table row
+    html.Div(className='row mt-4', children=[
+        # Status boxes
+        html.Div(className='col-md-3', children=[
+            html.H4('Status Groups'),
+            html.Div(id='status-boxes', className='row')
+        ]),
+        # Table
+        html.Div(className='col-md-9', children=[
+            html.Div([
+                html.H4('Infrastructure Details'),
+                dcc.Tabs([
+                    dcc.Tab(label='All Components', value='all'),
+                    dcc.Tab(label='Pods Only', value='pods'),
+                    dcc.Tab(label='Services Only', value='services'),
+                ], id='tabs', value='all'),
+                dash_table.DataTable(
+                    id='main-table',
+                    columns=[
+                        {'name': 'Name', 'id': 'Name', 'type': 'text', 'presentation': 'markdown'},
+                        {'name': 'Type', 'id': 'Type', 'type': 'text'},
+                        {'name': 'Status', 'id': 'Status', 'type': 'text'},
+                        {'name': 'State', 'id': 'State', 'type': 'text'}
+                    ],
+                    style_cell={
+                        'textAlign': 'left',
+                        'padding': '10px',
+                        'whiteSpace': 'normal'
+                    },
+                    style_header={
+                        'backgroundColor': 'rgb(230, 230, 230)',
+                        'fontWeight': 'bold'
+                    },
+                    style_data_conditional=[
+                        {
+                            'if': {'filter_query': '{Status} = "up"'},
+                            'backgroundColor': 'rgba(40, 167, 69, 0.1)'
+                        },
+                        {
+                            'if': {'filter_query': '{Status} = "down"'},
+                            'backgroundColor': 'rgba(220, 53, 69, 0.1)'
+                        }
+                    ],
+                    filter_action='native',
+                    sort_action='native',
+                    sort_mode='multi',
+                    page_size=10
+                )
+            ])
+        ])
+    ])
+])
+
+@app.callback(
+    [Output('summary-cards', 'children'),
+     Output('status-boxes', 'children'),
+     Output('main-table', 'data'),
+     Output('component-filter', 'options'),
+     Output('last-update-time', 'children')],
+    [Input('interval-component', 'n_intervals'),
+     Input('component-filter', 'value')]
+)
+def update_metrics(n_intervals, tab_value):
+    print("\nUpdating metrics...")
+    df = read_all_data()
+    
+    # Filter and print debug info
+    pods_df = df[df['Type'] == 'Pod']
+    print("Filtered Pods:", len(pods_df), "records")
+    
+    services_df = df[df['Type'] == 'Service']
+    print("Filtered Services:", len(services_df), "records")
+    
+    # Calculate pod metrics
+    total_pods = len(pods_df)
+    pods_up = len(pods_df[pods_df['Status'] == 'up'])
+    pods_down = len(pods_df[pods_df['Status'] == 'down'])
+    print(f"Pod metrics - Total: {total_pods}, Up: {pods_up}, Down: {pods_down}")
+    
+    # Calculate service metrics
+    total_services = len(services_df)
+    services_up = len(services_df[services_df['Status'] == 'up'])
+    services_down = len(services_df[services_df['Status'] == 'down'])
+    print(f"Service metrics - Total: {total_services}, Up: {services_up}, Down: {services_down}")
+    
+    # Create status boxes
+    status_groups = df.groupby(['Type', 'Status', 'State']).size().reset_index(name='count')
+    boxes = []
+    for _, row in status_groups.iterrows():
+        type_ = row['Type']
+        status = row['Status']
+        state = row['State']
+        count = row['count']
+        
+        box_class = 'success' if status.lower() == 'up' else 'danger'
+        
+        box = html.Div(className='col-12 mb-3', children=[
+            html.Div(className=f'card bg-{box_class} text-white', children=[
+                html.Div(className='card-body p-2', children=[
+                    html.H5(f"{count} {type_}{'s' if count > 1 else ''}", className='card-title mb-0'),
+                    html.Small(f"{state}", className='card-text')
+                ])
+            ])
+        ])
+        boxes.append(box)
+    
+    # Filter table data based on selected tab
+    print(f"\nPreparing table data for tab: {tab_value}")
+    if tab_value == 'pods':
+        table_data = pods_df.to_dict('records')
+        print(f"Pods table data: {len(table_data)} records")
+    elif tab_value == 'services':
+        table_data = services_df.to_dict('records')
+        print(f"Services table data: {len(table_data)} records")
+    else:  # 'all'
+        table_data = df.to_dict('records')
+        print(f"Combined table data: {len(table_data)} records")
+    
+    # Get current time
+    current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    return [
+        total_pods,
+        pods_up,
+        pods_down,
+        total_services,
+        services_up,
+        services_down,
+        boxes,
+        table_data,
+        f'Last Updated: {current_time}'
+    ]
+
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=8050)

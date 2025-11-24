@@ -1,0 +1,3 @@
+service1,running,healthy,PL1
+service2,running,stable,PL1
+service3,stopped,error,PL1
