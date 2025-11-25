@@ -11,5 +11,5 @@ curl -X POST http://localhost:5000/todos -H "Content-Type: application/json" -d 
 # Run tests
 pytest -v --cov=app
 
-# Run lint
+## Run lint
 flake8 app tests
