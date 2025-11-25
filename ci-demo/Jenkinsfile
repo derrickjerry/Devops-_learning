@@ -1,0 +1,26 @@
+pipeline {
+  agent  { docker { image 'python:3.12.0-alpine3.18' } }
+
+  stages {
+    stage('Install') {
+      steps {
+        sh 'python -m venv venv'
+        sh '. venv/bin/activate && pip install -r ci-demo/requirements.txt'
+      }
+    }
+    stage('Test') {
+      steps {
+        sh '. venv/bin/activate && cd ci-demo && python -m pytest --cov-report=term-missing'
+      }
+    }
+    stage('Lint') {
+      steps {
+        sh '. venv/bin/activate && python -m flake8 ci-demo/app ci-demo/tests'
+      }
+    }
+  }
+  post {
+    success { echo "CI Passed" }
+    failure { echo "CI Failed" }
+  }
+}
