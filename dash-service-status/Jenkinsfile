@@ -1,0 +1,21 @@
+pipeline {
+  agent  { docker { image 'python:3.12.0-alpine3.18' } }
+
+  stages {
+    stage('Install') {
+      steps {
+        sh 'python -m venv venv'
+        sh '. venv/bin/activate && pip install -r dash-service-status/requirements.txt'
+      }
+    }
+    stage('Test') {
+      steps {
+        sh '. venv/bin/activate && cd dash-service-status && python -m pytest'
+      }
+    }
+  }
+  post {
+    success { echo "CI Passed" }
+    failure { echo "CI Failed" }
+  }
+}
