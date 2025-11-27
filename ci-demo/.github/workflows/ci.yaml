@@ -1,4 +1,4 @@
-name: cjhange CI Pipeline
+name: change CI Pipeline
 
 on:
   push:
