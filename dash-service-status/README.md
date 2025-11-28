@@ -1,4 +1,4 @@
-# Dash Service Status Dashboard
+# Dash Service Statusss Dashboard
 
 This project is a Dash application that reads service status details from a text file and displays them on a dashboard.
 
