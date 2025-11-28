@@ -25,5 +25,5 @@ jobs:
         run: echo "PYTHONPATH=${{ github.workspace }}/ci-demo" >> $GITHUB_ENV
 
       - name: Run tests with coverage
-        run: pytest --cov=ci-demo/app --cov-report=term-missing
+        run: pytest --cov=ci-demo/app
 
