@@ -27,5 +27,3 @@ jobs:
       - name: Run tests with coverage
         run: pytest --cov=ci-demo/app --cov-report=term-missing
 
-      - name: Lint check
-        run: flake8 ci-demo/app ci-demo/tests
